@@ -1,6 +1,6 @@
 {
     "name": "packed_memory_array",
-    "version": "0.0.0",
+    "version": "0.1.0",
     "repo": "goodcleanfun/packed_memory_array",
     "description": "A packed memory array is an array that maintains sorted order interleaved with a constant number of gaps.",
     "keywords": ["array", "packed memory array", "sorted", "ordered"],
