@@ -17,8 +17,8 @@ static const double PMA_DENSITY_HIGH_LEAF = 1.0;
 static const double PMA_DENSITY_LOW_ROOT = 0.5;
 static const double PMA_DENSITY_LOW_LEAF = 0.25;
 
-static const uint8_t PMA_LARGEST_MAX_SPARSITY = 1 / PMA_DENSITY_LOW_LEAF;
-static const uint8_t PMA_LARGEST_EMPTY_SEGMENT = PMA_LARGEST_MAX_SPARSITY;
+#define PMA_LARGEST_MAX_SPARSITY (uint8_t)(1 / PMA_DENSITY_LOW_LEAF)
+#define PMA_LARGEST_EMPTY_SEGMENT (PMA_LARGEST_MAX_SPARSITY)
 
 static const uint64_t PMA_MAX_SIZE = 1ULL << 56; // Maximum size of the array
 
