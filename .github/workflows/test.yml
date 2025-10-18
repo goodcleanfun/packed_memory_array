@@ -74,6 +74,8 @@ jobs:
           curl -L https://raw.githubusercontent.com/goodcleanfun/threading/refs/heads/main/src/threading.h -o deps\threading\threading.h
           mkdir -p deps\rw_ticket_spinlock
           curl -L https://raw.githubusercontent.com/goodcleanfun/rw_ticket_spinlock/refs/heads/main/src/rw_ticket_spinlock.h -o deps\rw_ticket_spinlock\rw_ticket_spinlock.h
+          mkdir -p deps\aligned
+          curl -L https://raw.githubusercontent.com/goodcleanfun/aligned/refs/heads/main/src/aligned.h -o deps\aligned\aligned.h
           mkdir -p deps\aligned_array
           curl -L https://raw.githubusercontent.com/goodcleanfun/aligned_array/refs/heads/main/src/aligned_array.h -o deps\aligned_array\aligned_array.h
           mkdir -p deps\bit_utils
@@ -104,6 +106,8 @@ jobs:
           curl -L https://raw.githubusercontent.com/goodcleanfun/threading/refs/heads/main/src/threading.h -o deps/threading/threading.h
           mkdir -p deps/rw_ticket_spinlock
           curl -L https://raw.githubusercontent.com/goodcleanfun/rw_ticket_spinlock/refs/heads/main/src/rw_ticket_spinlock.h -o deps/rw_ticket_spinlock/rw_ticket_spinlock.h
+          mkdir -p deps/aligned
+          curl -L https://raw.githubusercontent.com/goodcleanfun/aligned/refs/heads/main/src/aligned.h -o deps/aligned/aligned.h
           mkdir -p deps/aligned_array
           curl -L https://raw.githubusercontent.com/goodcleanfun/aligned_array/refs/heads/main/src/aligned_array.h -o deps/aligned_array/aligned_array.h
           mkdir -p deps/bit_utils
