@@ -22,24 +22,6 @@ static const double PMA_DENSITY_LOW_LEAF = 0.25;
 
 static const uint64_t PMA_MAX_SIZE = 1ULL << 56; // Maximum size of the array
 
-static inline uint64_t floor_log2(uint64_t x) {
-    return x == 0 ? 0 : 63 - clz(x);
-}
-
-static inline uint64_t ceil_log2(uint64_t x) {
-    return x == 0 ? 0 : 64 - clz(x - 1);
-}
-
-// Smallest power of 2 not less than x
-static inline uint64_t hyper_ceil(uint64_t x) {
-    return (1 << ceil_log2(x));
-}
-
-static inline uint64_t ceil_div(uint64_t x, uint64_t y) {
-    if (y == 0 || x == 0) return 0; // Avoid division by zero
-    return (1 + ((x - 1) / y));
-}
-
 #endif // PMA_H
 
 #ifndef PMA_NAME
