@@ -208,7 +208,11 @@ static bool PMA_FUNC(pack)(PMA_NAME *pma, size_t from, size_t to, size_t n) {
         read_index++;
     }
 
-    return (n == write_index - from);
+    if (!(n == write_index - from)) {
+        printf("PMA_FUNC(pack) failed: n = %zu, write_index = %zu, read_index = %zu, from = %zu, to = %zu\n", n, write_index, read_index, from, to);
+        return false;
+    }
+    return true;
 }
 
 static bool PMA_FUNC(spread)(PMA_NAME *pma, size_t from, size_t to, size_t n) {
