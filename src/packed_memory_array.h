@@ -95,7 +95,13 @@ static bool PMA_FUNC(init_size)(PMA_NAME *pma, size_t size) {
     if (cap < size) {
         size = cap;
     }
-    PMA_ARRAY_FUNC(init_size_fixed)(&pma->array, size);
+    if (!PMA_ARRAY_FUNC(init_size_fixed)(&pma->array, size)) {
+        return false;
+    }
+
+    for (size_t i = 0; i < size; i++) {
+        PMA_ARRAY_FUNC(set_unchecked)(&pma->array, i, PMA_EMPTY_VALUE);
+    }
 
     pma->count = 0;
     pma->num_segments = cap / pma->segment_size;
