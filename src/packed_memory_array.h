@@ -190,6 +190,7 @@ static size_t PMA_FUNC(count)(PMA_NAME *pma) {
 
 static bool PMA_FUNC(pack)(PMA_NAME *pma, size_t from, size_t to, size_t n) {
     if (pma == NULL || from >= to || to > PMA_ARRAY_FUNC(size)(&pma->array)) {
+        printf("PMA_FUNC(pack) failed: pma == NULL: %d || from >= to %d || to > PMA_ARRAY_FUNC(size)(&pma->array) %d\n", pma == NULL, from >= to, to > PMA_ARRAY_FUNC(size)(&pma->array));
         return false;
     }
     // In-place packing of elements in the range [from, to)
@@ -212,6 +213,7 @@ static bool PMA_FUNC(pack)(PMA_NAME *pma, size_t from, size_t to, size_t n) {
 
 static bool PMA_FUNC(spread)(PMA_NAME *pma, size_t from, size_t to, size_t n) {
     if (pma == NULL || from >= to || to > PMA_ARRAY_FUNC(size)(&pma->array)) {
+        printf("PMA_FUNC(spread) failed: pma == NULL: %d || from >= to %d || to > PMA_ARRAY_FUNC(size)(&pma->array) %d\n", pma == NULL, from >= to, to > PMA_ARRAY_FUNC(size)(&pma->array));
         return false;
     }
     // In-place spreading of elements in the range [from, to) using 8-bit fixed-point arithmetic
@@ -243,6 +245,7 @@ static bool PMA_FUNC(resize)(PMA_NAME *pma) {
     segment_size = PMA_LARGEST_MAX_SPARSITY * segment_size;
 
     if (new_capacity > PMA_MAX_SIZE) {
+        printf("PMA_FUNC(resize) failed: new_capacity > PMA_MAX_SIZE %d\n", new_capacity > PMA_MAX_SIZE);
         return false;
     }
     pma->segment_size = segment_size;
@@ -300,7 +303,7 @@ static bool PMA_FUNC(rebalance)(PMA_NAME *pma, size_t i) {
         if (!PMA_FUNC(pack)(pma, window_start, window_end, occupied)) return false;
         if (!PMA_FUNC(spread)(pma, window_start, window_end, occupied)) return false;
     } else {
-        PMA_FUNC(resize)(pma);
+        if (!PMA_FUNC(resize)(pma)) return false;
     }
     return true;
 }
@@ -364,9 +367,10 @@ static bool PMA_FUNC(delete_at)(PMA_NAME *pma, size_t i) {
         return false;
     }
     if (!PMA_ARRAY_FUNC(set)(&pma->array, i, PMA_EMPTY_VALUE)) {
+        printf("PMA_FUNC(delete_at) failed: !PMA_ARRAY_FUNC(set)(&pma->array, %d, PMA_EMPTY_VALUE)\n", i);
         return false;
     }
-    // Rebalance thre tree if necessary
+    // Rebalance the tree if necessary
     return PMA_FUNC(rebalance)(pma, i);
 }
 
@@ -375,7 +379,7 @@ static bool PMA_FUNC(delete)(PMA_NAME *pma, PMA_TYPE value) {
 
     int64_t i;
     if (PMA_FUNC(find)(pma, value, &i)) {
-        PMA_FUNC(delete_at)(pma, (size_t)i);
+        if (!PMA_FUNC(delete_at)(pma, (size_t)i)) return false;
         return true;
     }
     return false;
