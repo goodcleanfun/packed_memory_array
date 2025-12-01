@@ -79,8 +79,7 @@ static const uint64_t PMA_MAX_SIZE = 1ULL << 56; // Maximum size of the array
 #define PMA_ARRAY_FUNC(func) PMA_CONCAT(PMA_ARRAY_NAME, _##func)
 
 typedef struct {
-    PMA_ARRAY_NAME *array;
-    bool own_array; // If true, destroy will be called on array
+    PMA_ARRAY_NAME array;
     size_t segment_size;
     size_t num_segments;
     size_t count;
@@ -89,61 +88,53 @@ typedef struct {
     double density_low; // Density threshold for low density
 } PMA_NAME;
 
-PMA_NAME *PMA_FUNC(new_array)(PMA_ARRAY_NAME *array) {
-    if (array == NULL) return NULL;
-
-    PMA_NAME *pma = PMA_MALLOC(sizeof(PMA_NAME));
-    if (pma == NULL) return NULL;
-
-    pma->array = array;
+static bool PMA_FUNC(init_size)(PMA_NAME *pma, size_t size) {
+    if (pma == NULL) return false;
     pma->segment_size = PMA_LARGEST_EMPTY_SEGMENT;
     size_t cap = (1ULL << pma->segment_size);
-    if (cap < PMA_ARRAY_FUNC(capacity)(array)) {
-        if (!PMA_ARRAY_FUNC(resize_fixed)(array, cap)) {
-            PMA_FREE(pma);
-            return NULL;
-        }
+    if (cap < size) {
+        size = cap;
     }
+    PMA_ARRAY_FUNC(init_size_fixed)(&pma->array, size);
 
     pma->count = 0;
-    pma->own_array = false;
     pma->num_segments = cap / pma->segment_size;
     pma->height = floor_log2(pma->num_segments) + 1;
     pma->density_high = (PMA_DENSITY_HIGH_LEAF - PMA_DENSITY_HIGH_ROOT) / pma->height;
     pma->density_low = (PMA_DENSITY_LOW_ROOT - PMA_DENSITY_LOW_LEAF) / pma->height;
+    return true;
+}
+
+static PMA_NAME *PMA_FUNC(new_size)(size_t size) {
+    PMA_NAME *pma = PMA_MALLOC(sizeof(PMA_NAME));
+    if (pma == NULL) {
+        return NULL;
+    }
+    if (!PMA_FUNC(init_size)(pma, size)) {
+        return NULL;
+    }
     return pma;
 }
 
-PMA_NAME *PMA_FUNC(new)(void) {
-    PMA_ARRAY_NAME *array = PMA_ARRAY_FUNC(new_size_fixed)(1ULL << PMA_LARGEST_EMPTY_SEGMENT);
-
-    if (array == NULL) {
-        return NULL;
-    }
-    PMA_NAME *pma = PMA_FUNC(new_array)(array);
-    size_t n = PMA_ARRAY_FUNC(size)(pma->array);
-    for (size_t i = 0; i < n; i++) {
-        PMA_ARRAY_FUNC(set_unchecked)(pma->array, i, PMA_EMPTY_VALUE);
-    }
-    pma->own_array = true;
-    return pma;
+static PMA_NAME *PMA_FUNC(new)(void) {
+    return PMA_FUNC(new_size)(1ULL << PMA_LARGEST_EMPTY_SEGMENT);
 }
 
 static inline bool PMA_FUNC(empty_at_unchecked)(PMA_NAME *pma, size_t index) {
-    return PMA_EQUALS(PMA_ARRAY_FUNC(get_unchecked)(pma->array, index), PMA_EMPTY_VALUE);
+    return PMA_EQUALS(PMA_ARRAY_FUNC(get_unchecked)(&pma->array, index), PMA_EMPTY_VALUE);
 }
 
 static inline bool PMA_FUNC(empty_at)(PMA_NAME *pma, size_t index) {
     PMA_TYPE value;
-    return pma != NULL && pma->array != NULL && PMA_ARRAY_FUNC(get)(pma->array, index, &value) && PMA_EQUALS(value, PMA_EMPTY_VALUE);
+    return pma != NULL && PMA_ARRAY_FUNC(get)(&pma->array, index, &value) && PMA_EQUALS(value, PMA_EMPTY_VALUE);
 }
 
 
 static bool PMA_FUNC(find)(PMA_NAME *pma, PMA_TYPE key, int64_t *index) {
-    if (pma == NULL || pma->array == NULL || index == NULL) {
+    if (pma == NULL || index == NULL) {
         return false;
     }
-    PMA_ARRAY_NAME *array = pma->array;
+    PMA_ARRAY_NAME *array = &pma->array;
     int64_t lo = 0;
     int64_t hi = PMA_ARRAY_FUNC(size)(array) - 1;
     while (lo <= hi) {
@@ -188,8 +179,8 @@ static bool PMA_FUNC(find)(PMA_NAME *pma, PMA_TYPE key, int64_t *index) {
 */
 
 static size_t PMA_FUNC(size)(PMA_NAME *pma) {
-    if (pma == NULL || pma->array == NULL) return 0;
-    return PMA_ARRAY_FUNC(size)(pma->array);
+    if (pma == NULL) return 0;
+    return PMA_ARRAY_FUNC(size)(&pma->array);
 }
 
 static size_t PMA_FUNC(count)(PMA_NAME *pma) {
@@ -198,7 +189,7 @@ static size_t PMA_FUNC(count)(PMA_NAME *pma) {
 }
 
 static bool PMA_FUNC(pack)(PMA_NAME *pma, size_t from, size_t to, size_t n) {
-    if (pma == NULL || pma->array == NULL || from >= to || to > PMA_ARRAY_FUNC(size)(pma->array)) {
+    if (pma == NULL || from >= to || to > PMA_ARRAY_FUNC(size)(&pma->array)) {
         return false;
     }
     // In-place packing of elements in the range [from, to)
@@ -208,8 +199,8 @@ static bool PMA_FUNC(pack)(PMA_NAME *pma, size_t from, size_t to, size_t n) {
     while (read_index < to) {
         if (!PMA_FUNC(empty_at_unchecked)(pma, read_index)) {
             if (read_index > write_index) {
-                PMA_ARRAY_FUNC(set_unchecked)(pma->array, write_index, PMA_ARRAY_FUNC(get_unchecked)(pma->array, read_index));
-                PMA_ARRAY_FUNC(set_unchecked)(pma->array, read_index, PMA_EMPTY_VALUE);
+                PMA_ARRAY_FUNC(set_unchecked)(&pma->array, write_index, PMA_ARRAY_FUNC(get_unchecked)(&pma->array, read_index));
+                PMA_ARRAY_FUNC(set_unchecked)(&pma->array, read_index, PMA_EMPTY_VALUE);
             }
             write_index++;
         }
@@ -220,7 +211,7 @@ static bool PMA_FUNC(pack)(PMA_NAME *pma, size_t from, size_t to, size_t n) {
 }
 
 static bool PMA_FUNC(spread)(PMA_NAME *pma, size_t from, size_t to, size_t n) {
-    if (pma == NULL || pma->array == NULL || from >= to || to > PMA_ARRAY_FUNC(size)(pma->array)) {
+    if (pma == NULL || from >= to || to > PMA_ARRAY_FUNC(size)(&pma->array)) {
         return false;
     }
     // In-place spreading of elements in the range [from, to) using 8-bit fixed-point arithmetic
@@ -230,8 +221,8 @@ static bool PMA_FUNC(spread)(PMA_NAME *pma, size_t from, size_t to, size_t n) {
     size_t read_index = from + n - 1;
     size_t write_index = (to << 8) - frequency;
     while ((write_index >> 8) > read_index) {
-        PMA_ARRAY_FUNC(set_unchecked)(pma->array, write_index >> 8, PMA_ARRAY_FUNC(get_unchecked)(pma->array, read_index));
-        PMA_ARRAY_FUNC(set_unchecked)(pma->array, read_index, PMA_EMPTY_VALUE);
+        PMA_ARRAY_FUNC(set_unchecked)(&pma->array, write_index >> 8, PMA_ARRAY_FUNC(get_unchecked)(&pma->array, read_index));
+        PMA_ARRAY_FUNC(set_unchecked)(&pma->array, read_index, PMA_EMPTY_VALUE);
         read_index--;
         write_index -= frequency;
     }
@@ -239,8 +230,8 @@ static bool PMA_FUNC(spread)(PMA_NAME *pma, size_t from, size_t to, size_t n) {
 }
 
 static bool PMA_FUNC(resize)(PMA_NAME *pma) {
-    if (pma == NULL || pma->array == NULL) return false;
-    if (!PMA_FUNC(pack)(pma, 0, PMA_ARRAY_FUNC(size)(pma->array), pma->count)) {
+    if (pma == NULL) return false;
+    if (!PMA_FUNC(pack)(pma, 0, PMA_ARRAY_FUNC(size)(&pma->array), pma->count)) {
         return false;
     }
     size_t segment_size = ceil_log2(pma->count);
@@ -259,9 +250,9 @@ static bool PMA_FUNC(resize)(PMA_NAME *pma) {
     pma->height = floor_log2(num_segments) + 1;
     pma->density_high = (PMA_DENSITY_HIGH_LEAF - PMA_DENSITY_HIGH_ROOT) / pma->height;
     pma->density_low = (PMA_DENSITY_LOW_ROOT - PMA_DENSITY_LOW_LEAF) / pma->height;
-    PMA_ARRAY_FUNC(resize_fixed)(pma->array, new_capacity);
+    PMA_ARRAY_FUNC(resize_fixed)(&pma->array, new_capacity);
     for (size_t i = pma->count; i < new_capacity; i++) {
-        PMA_ARRAY_FUNC(set_unchecked)(pma->array, i, PMA_EMPTY_VALUE);
+        PMA_ARRAY_FUNC(set_unchecked)(&pma->array, i, PMA_EMPTY_VALUE);
     }
     return PMA_FUNC(spread)(pma, 0, new_capacity, pma->count);
 }
@@ -317,13 +308,13 @@ static bool PMA_FUNC(rebalance)(PMA_NAME *pma, size_t i) {
 
 
 static bool PMA_FUNC(insert_after)(PMA_NAME *pma, int64_t i, PMA_TYPE key) {
-    if (pma == NULL || pma->array == NULL || i < -1 || (i >= 0 && PMA_FUNC(empty_at)(pma, (size_t)i))) {
+    if (pma == NULL || i < -1 || (i >= 0 && PMA_FUNC(empty_at)(pma, (size_t)i))) {
         return false;
     }
     // Find an empty space to the right of i, which should be close if density thresholds are met
     int64_t j = i + 1;
 
-    size_t n = PMA_ARRAY_FUNC(size)(pma->array);
+    size_t n = PMA_ARRAY_FUNC(size)(&pma->array);
     while(j < n && !PMA_FUNC(empty_at_unchecked)(pma, (size_t)j)) {
         j++;
     }
@@ -331,10 +322,10 @@ static bool PMA_FUNC(insert_after)(PMA_NAME *pma, int64_t i, PMA_TYPE key) {
         // Found an empty space to the right of i
         while (j > i + 1) {
            // Push elements to make space for the new value
-            PMA_ARRAY_FUNC(set_unchecked)(pma->array, (size_t)j, PMA_ARRAY_FUNC(get_unchecked)(pma->array, (size_t)(j - 1)));
+            PMA_ARRAY_FUNC(set_unchecked)(&pma->array, (size_t)j, PMA_ARRAY_FUNC(get_unchecked)(&pma->array, (size_t)(j - 1)));
             j--;
         }
-        PMA_ARRAY_FUNC(set_unchecked)(pma->array, (size_t)i + 1, key);
+        PMA_ARRAY_FUNC(set_unchecked)(&pma->array, (size_t)i + 1, key);
         i++;
     } else {
         // No empty space to the right of i
@@ -346,11 +337,11 @@ static bool PMA_FUNC(insert_after)(PMA_NAME *pma, int64_t i, PMA_TYPE key) {
             // Found a space
             while (j < i) {
                 // Push elements over to make space for the new value
-                PMA_TYPE next = PMA_ARRAY_FUNC(get_unchecked)(pma->array, (size_t)(j + 1));
-                PMA_ARRAY_FUNC(set_unchecked)(pma->array, (size_t)j, next);
+                PMA_TYPE next = PMA_ARRAY_FUNC(get_unchecked)(&pma->array, (size_t)(j + 1));
+                PMA_ARRAY_FUNC(set_unchecked)(&pma->array, (size_t)j, next);
                 j++;
             }
-            PMA_ARRAY_FUNC(set_unchecked)(pma->array, (size_t)i, key);
+            PMA_ARRAY_FUNC(set_unchecked)(&pma->array, (size_t)i, key);
         }
     }
 
@@ -359,7 +350,7 @@ static bool PMA_FUNC(insert_after)(PMA_NAME *pma, int64_t i, PMA_TYPE key) {
 }
 
 static bool PMA_FUNC(insert)(PMA_NAME *pma, PMA_TYPE key) {
-    if (pma == NULL || pma->array == NULL) return false;
+    if (pma == NULL) return false;
     int64_t i;
     if (!PMA_FUNC(find)(pma, key, &i)) {
         // No duplicates
@@ -369,10 +360,10 @@ static bool PMA_FUNC(insert)(PMA_NAME *pma, PMA_TYPE key) {
 }
 
 static bool PMA_FUNC(delete_at)(PMA_NAME *pma, size_t i) {
-    if (pma == NULL || pma->array == NULL) {
+    if (pma == NULL) {
         return false;
     }
-    if (!PMA_ARRAY_FUNC(set)(pma->array, i, PMA_EMPTY_VALUE)) {
+    if (!PMA_ARRAY_FUNC(set)(&pma->array, i, PMA_EMPTY_VALUE)) {
         return false;
     }
     // Rebalance thre tree if necessary
@@ -380,7 +371,7 @@ static bool PMA_FUNC(delete_at)(PMA_NAME *pma, size_t i) {
 }
 
 static bool PMA_FUNC(delete)(PMA_NAME *pma, PMA_TYPE value) {
-    if (pma == NULL || pma->array == NULL) return false;
+    if (pma == NULL) return false;
 
     int64_t i;
     if (PMA_FUNC(find)(pma, value, &i)) {
@@ -392,9 +383,7 @@ static bool PMA_FUNC(delete)(PMA_NAME *pma, PMA_TYPE value) {
 
 void PMA_FUNC(destroy)(PMA_NAME *pma) {
     if (pma == NULL) return;
-    if (pma->array != NULL && pma->own_array) {
-        PMA_ARRAY_FUNC(destroy)(pma->array);
-    }
+    PMA_ARRAY_FUNC(destroy_data)(&pma->array);
     PMA_FREE(pma);
 }
 
