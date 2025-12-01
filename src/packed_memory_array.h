@@ -190,6 +190,7 @@ static size_t PMA_FUNC(count)(PMA_NAME *pma) {
 
 static bool PMA_FUNC(pack)(PMA_NAME *pma, size_t from, size_t to, size_t n) {
     if (pma == NULL || from >= to || to > PMA_ARRAY_FUNC(size)(&pma->array)) {
+        printf("PMA_FUNC(pack) failed: pma == NULL: %d || from >= to %d || to > PMA_ARRAY_FUNC(size)(&pma->array) %d\n", pma == NULL, from >= to, to > PMA_ARRAY_FUNC(size)(&pma->array));
         return false;
     }
     // In-place packing of elements in the range [from, to)
@@ -207,15 +208,12 @@ static bool PMA_FUNC(pack)(PMA_NAME *pma, size_t from, size_t to, size_t n) {
         read_index++;
     }
 
-    if (n == write_index - from) {
-        return true;
-    } else {
-        return false;
-    }
+    return (n == write_index - from);
 }
 
 static bool PMA_FUNC(spread)(PMA_NAME *pma, size_t from, size_t to, size_t n) {
     if (pma == NULL || from >= to || to > PMA_ARRAY_FUNC(size)(&pma->array)) {
+        printf("PMA_FUNC(spread) failed: pma == NULL: %d || from >= to %d || to > PMA_ARRAY_FUNC(size)(&pma->array) %d\n", pma == NULL, from >= to, to > PMA_ARRAY_FUNC(size)(&pma->array));
         return false;
     }
     // In-place spreading of elements in the range [from, to) using 8-bit fixed-point arithmetic
@@ -236,6 +234,7 @@ static bool PMA_FUNC(spread)(PMA_NAME *pma, size_t from, size_t to, size_t n) {
 static bool PMA_FUNC(resize)(PMA_NAME *pma) {
     if (pma == NULL) return false;
     if (!PMA_FUNC(pack)(pma, 0, PMA_ARRAY_FUNC(size)(&pma->array), pma->count)) {
+        printf("PMA_FUNC(resize) failed: !PMA_FUNC(pack)(pma, 0, %zu, %zu)\n", PMA_ARRAY_FUNC(size)(&pma->array), pma->count);
         return false;
     }
     size_t segment_size = ceil_log2(pma->count);
@@ -247,6 +246,7 @@ static bool PMA_FUNC(resize)(PMA_NAME *pma) {
     segment_size = PMA_LARGEST_MAX_SPARSITY * segment_size;
 
     if (new_capacity > PMA_MAX_SIZE) {
+        printf("PMA_FUNC(resize) failed: new_capacity > PMA_MAX_SIZE %zu > %zu\n", new_capacity, PMA_MAX_SIZE);
         return false;
     }
     pma->segment_size = segment_size;
@@ -302,13 +302,16 @@ static bool PMA_FUNC(rebalance)(PMA_NAME *pma, size_t i) {
         (density < density_high || fabs(density_low - density) < DBL_EPSILON)
     ) {
         if (!PMA_FUNC(pack)(pma, window_start, window_end, occupied)) {
+            printf("PMA_FUNC(rebalance) failed: !PMA_FUNC(pack)(pma, %zu, %zu, %zu)\n", window_start, window_end, occupied);
             return false;
         }
         if (!PMA_FUNC(spread)(pma, window_start, window_end, occupied)) {
+            printf("PMA_FUNC(rebalance) failed: !PMA_FUNC(spread)(pma, %zu, %zu, %zu)\n", window_start, window_end, occupied);
             return false;
         }
     } else {
         if (!PMA_FUNC(resize)(pma)) {
+            printf("PMA_FUNC(rebalance) failed: !PMA_FUNC(resize)(pma)\n");
             return false;
         }
     }
@@ -319,6 +322,7 @@ static bool PMA_FUNC(rebalance)(PMA_NAME *pma, size_t i) {
 
 static bool PMA_FUNC(insert_after)(PMA_NAME *pma, int64_t i, PMA_TYPE key) {
     if (pma == NULL || i < -1 || (i >= 0 && PMA_FUNC(empty_at)(pma, (size_t)i))) {
+        printf("PMA_FUNC(insert_after) failed: pma == NULL: %d || i < -1: %d || (i >= 0 && PMA_FUNC(empty_at)(pma, (size_t)i)) %d\n", pma == NULL, i < -1, i >= 0 && PMA_FUNC(empty_at)(pma, (size_t)i));
         return false;
     }
     // Find an empty space to the right of i, which should be close if density thresholds are met
